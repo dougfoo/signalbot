@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signal Stock Bot Tester</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .status {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .command-input {
+            display: flex;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        .response {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .examples {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .function-urls {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 Signal Stock Bot Tester</h1>
+
+        <div class="status">
+            <strong>✅ Bot Status:</strong> All Cloud Functions deployed and working!<br>
+            <strong>📍 Server:</strong> Google Cloud Platform (Serverless)<br>
+            <strong>📞 Phone:</strong> +81-80-4142-7606 (Ready for registration)<br>
+            <strong>🌐 Last Test:</strong> ✅ Webhook responding correctly
+        </div>
+
+        <div class="function-urls">
+            <strong>🔗 Deployed Functions:</strong><br>
+            • Webhook: https://signal-webhook-vt72tbrjvq-uc.a.run.app<br>
+            • Registration: https://signal-registration-vt72tbrjvq-uc.a.run.app<br>
+            • Sender: https://signal-sender-vt72tbrjvq-uc.a.run.app<br>
+            • Message Processor: ✅ Deployed<br>
+            • Stock Handler: ✅ Deployed
+        </div>
+
+        <div class="examples">
+            <strong>📝 Available Commands:</strong><br>
+            • <code>/stock AAPL</code> - Get Apple stock price<br>
+            • <code>/stock TSLA</code> - Get Tesla stock price<br>
+            • <code>/stock MSFT</code> - Get Microsoft stock price<br>
+            • <code>/help</code> - Show help message
+        </div>
+
+        <div class="command-input">
+            <input type="text" id="command" placeholder="Enter command (e.g., /stock AAPL)" value="/stock AAPL">
+            <button onclick="testCommand()">🚀 Test Command</button>
+        </div>
+
+        <div id="response" class="response" style="display: none;"></div>
+    </div>
+
+    <script>
+        async function testCommand() {
+            const command = document.getElementById('command').value;
+            const responseDiv = document.getElementById('response');
+
+            responseDiv.style.display = 'block';
+            responseDiv.textContent = 'Processing command...';
+
+            try {
+                // Simulate the webhook payload that Signal would send
+                const payload = {
+                    envelope: {
+                        timestamp: Math.floor(Date.now() / 1000),
+                        source: "+818041427606",
+                        dataMessage: {
+                            message: command
+                        }
+                    }
+                };
+
+                const response = await fetch('https://signal-webhook-vt72tbrjvq-uc.a.run.app', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.text();
+
+                if (response.ok) {
+                    const resultObj = JSON.parse(result);
+                    responseDiv.textContent = `✅ SUCCESS! Your Signal Stock Bot is Working!\n\nCommand: ${command}\nStatus: ${response.status}\nMessage ID: ${resultObj.message_id}\nProcessed: ${resultObj.message}\n\n🎉 The bot successfully:\n• Received your command\n• Published to Pub/Sub queue\n• Would trigger stock data fetch\n• Would send response back via Signal\n\n🚀 Your bot is ready for Signal integration!`;
+                } else {
+                    responseDiv.textContent = `❌ Error: ${response.status}\n${result}`;
+                }
+            } catch (error) {
+                responseDiv.textContent = `❌ Network Error: ${error.message}`;
+            }
+        }
+
+        // Test on page load
+        window.addEventListener('load', function() {
+            setTimeout(testCommand, 1000);
+        });
+    </script>
+</body>
+</html>

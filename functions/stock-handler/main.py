@@ -42,7 +42,7 @@ def handle_stock_request(cloud_event):
             message = f"❌ Error fetching data for {ticker}: {stock_info['error']}"
 
         # Send response (integrate with Signal API)
-        await send_signal_response(sender, message, group_id)
+        send_signal_response(sender, message, group_id)
 
     except Exception as e:
         logger.error(f"Error handling stock request: {str(e)}")
@@ -102,7 +102,7 @@ def format_stock_message(ticker, data):
 
     return message
 
-async def send_signal_response(sender, message, group_id):
+def send_signal_response(sender, message, group_id):
     """Send response back to Signal"""
     # TODO: Implement Signal API integration
     # This would use Signal's API to send the formatted message back

@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  signal-api:
+    image: bbernhard/signal-cli-rest-api:latest
+    container_name: signal-api
+    ports:
+      - "8080:8080"
+    environment:
+      - MODE=json-rpc
+      - AUTO_RECEIVE_SCHEDULE=*/10 * * * * *  # Check for messages every 10 seconds
+      - WEBHOOK_URL=https://signal-webhook-vt72tbrjvq-uc.a.run.app
+    volumes:
+      - signal-data:/home/.local/share/signal-cli
+    restart: unless-stopped
+
+volumes:
+  signal-data:

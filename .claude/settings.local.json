@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit:*)",
+      "Bash(gcloud:*)",
+      "Read(//c/**)",
+      "Bash(export:*)",
+      "Bash(\"/c/Users/dougc/google-cloud-sdk/bin/gcloud.cmd\" --version)",
+      "Bash(\"/c/Users/dougc/google-cloud-sdk/bin/gcloud.cmd\" projects list --limit=5)",
+      "Bash(./deploy/simple-deploy.sh:*)",
+      "Bash(\"/c/Users/dougc/google-cloud-sdk/bin/gcloud.cmd\" compute ssh signal-api-server --zone=us-central1-a --project=signalbot-1758169967 --command=\"sudo apt update && sudo apt install -y docker.io docker-compose git && sudo systemctl start docker && sudo systemctl enable docker\")",
+      "Bash(\"/c/Users/dougc/google-cloud-sdk/bin/gcloud.cmd\" compute ssh signal-api-server --zone=us-central1-a --project=signalbot-1758169967)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

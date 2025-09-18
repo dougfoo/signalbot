@@ -3,6 +3,16 @@ output "webhook_url" {
   value       = google_cloudfunctions2_function.webhook.service_config[0].uri
 }
 
+output "signal_registration_url" {
+  description = "URL for Signal registration function"
+  value       = google_cloudfunctions2_function.signal_registration.service_config[0].uri
+}
+
+output "signal_sender_url" {
+  description = "URL for Signal sender function"
+  value       = google_cloudfunctions2_function.signal_sender.service_config[0].uri
+}
+
 output "project_id" {
   description = "Google Cloud Project ID"
   value       = var.project_id

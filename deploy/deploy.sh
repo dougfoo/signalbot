@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Signal Bot GCP Deployment Script
-# This script deploys the Signal bot to Google Cloud Platform
+# This script deploys the Signal bot AND Signal API to Google Cloud Platform
 
 set -e
 
@@ -130,25 +130,69 @@ upload_function_sources() {
     gsutil cp webhook-source.zip gs://$BUCKET_NAME/
     gsutil cp message-processor-source.zip gs://$BUCKET_NAME/
     gsutil cp stock-handler-source.zip gs://$BUCKET_NAME/
+    gsutil cp signal-registration-source.zip gs://$BUCKET_NAME/
+    gsutil cp signal-sender-source.zip gs://$BUCKET_NAME/
 
     print_status "Function source upload complete!"
 }
 
-setup_secrets() {
-    print_status "Setting up secrets..."
-    print_warning "You need to manually set the following secrets:"
+package_signal_functions() {
+    print_status "Packaging Signal functions..."
+
+    cd $FUNCTIONS_DIR
+
+    # Package signal registration function
+    print_status "Packaging signal registration function..."
+    cd signal-registration
+    zip -r ../../signal-registration-source.zip . -x "*.pyc" "__pycache__/*"
+    cd ..
+
+    # Package signal sender function
+    print_status "Packaging signal sender function..."
+    cd signal-sender
+    zip -r ../../signal-sender-source.zip . -x "*.pyc" "__pycache__/*"
+    cd ..
+
+    cd ..
+    print_status "Signal function packaging complete!"
+}
+
+show_next_steps() {
+    print_status "Deployment complete! Next steps:"
     echo ""
-    echo "1. Signal API URL:"
-    echo "   gcloud secrets versions add signal-api-url --data-file=- <<< 'https://your-signal-api-url'"
+
+    # Get function URLs
+    cd $TERRAFORM_DIR
+    WEBHOOK_URL=$(terraform output -raw webhook_url)
+    REGISTRATION_URL=$(terraform output -raw signal_registration_url)
+    SENDER_URL=$(terraform output -raw signal_sender_url)
+    cd ..
+
+    echo "📱 STEP 1: Register your Signal phone number"
+    echo "   curl -X POST \"$REGISTRATION_URL\" \\"
+    echo "     -H \"Content-Type: application/json\" \\"
+    echo "     -d '{\"action\": \"register\", \"phone_number\": \"+1234567890\"}'"
     echo ""
-    echo "2. Signal API Token:"
-    echo "   gcloud secrets versions add signal-api-token --data-file=- <<< 'your-signal-api-token'"
+    echo "   # After receiving SMS code:"
+    echo "   curl -X POST \"$REGISTRATION_URL\" \\"
+    echo "     -H \"Content-Type: application/json\" \\"
+    echo "     -d '{\"action\": \"verify\", \"phone_number\": \"+1234567890\", \"verification_code\": \"123456\"}'"
     echo ""
+    echo "🤖 STEP 2: Set up Signal webhook (point to this URL):"
+    echo "   $WEBHOOK_URL"
+    echo ""
+    echo "🧪 STEP 3: Test your bot:"
+    echo "   Send '/stock AAPL' to your registered Signal number"
+    echo ""
+    echo "📊 Function URLs:"
+    echo "   - Webhook: $WEBHOOK_URL"
+    echo "   - Registration: $REGISTRATION_URL"
+    echo "   - Sender: $SENDER_URL"
 }
 
 cleanup() {
     print_status "Cleaning up temporary files..."
-    rm -f webhook-source.zip message-processor-source.zip stock-handler-source.zip
+    rm -f webhook-source.zip message-processor-source.zip stock-handler-source.zip signal-registration-source.zip signal-sender-source.zip
 }
 
 main() {
@@ -161,13 +205,11 @@ main() {
     check_prerequisites
     setup_gcp_project
     package_functions
+    package_signal_functions
     deploy_infrastructure
     upload_function_sources
-    setup_secrets
     cleanup
-
-    print_status "Deployment complete!"
-    print_warning "Don't forget to set up the Signal API secrets and configure your webhook URL."
+    show_next_steps
 
     # Get webhook URL
     cd $TERRAFORM_DIR

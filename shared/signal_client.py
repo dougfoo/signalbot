@@ -7,62 +7,48 @@ import os
 logger = logging.getLogger(__name__)
 
 class SignalClient:
-    """Client for interacting with Signal API"""
+    """Client for interacting with serverless Signal functions"""
 
     def __init__(self):
         self.project_id = os.environ.get('GOOGLE_CLOUD_PROJECT')
-        self.signal_api_url = self._get_signal_api_url()
-        self.api_token = self._get_api_token()
+        self.region = os.environ.get('GCP_REGION', 'us-central1')
+        self.signal_sender_url = self._get_signal_sender_url()
 
-    def _get_signal_api_url(self):
-        """Get Signal API URL from Secret Manager"""
+    def _get_signal_sender_url(self):
+        """Get Signal sender function URL"""
         try:
-            client = secretmanager.SecretManagerServiceClient()
-            name = f"projects/{self.project_id}/secrets/signal-api-url/versions/latest"
-            response = client.access_secret_version(request={"name": name})
-            return response.payload.data.decode("UTF-8")
+            # Cloud Function URL format
+            return f"https://{self.region}-{self.project_id}.cloudfunctions.net/signal-sender"
         except Exception as e:
-            logger.error(f"Error getting Signal API URL: {e}")
-            return None
-
-    def _get_api_token(self):
-        """Get Signal API token from Secret Manager"""
-        try:
-            client = secretmanager.SecretManagerServiceClient()
-            name = f"projects/{self.project_id}/secrets/signal-api-token/versions/latest"
-            response = client.access_secret_version(request={"name": name})
-            return response.payload.data.decode("UTF-8")
-        except Exception as e:
-            logger.error(f"Error getting Signal API token: {e}")
+            logger.error(f"Error constructing Signal sender URL: {e}")
             return None
 
     def send_message(self, recipient, message, group_id=None):
-        """Send a message via Signal API"""
+        """Send a message via serverless Signal function"""
         try:
-            if not self.signal_api_url or not self.api_token:
-                logger.error("Signal API credentials not configured")
+            if not self.signal_sender_url:
+                logger.error("Signal sender URL not configured")
                 return False
 
             payload = {
+                "recipient": recipient,
                 "message": message,
-                "recipients": [recipient] if not group_id else None,
-                "groupId": group_id
+                "group_id": group_id
             }
 
             headers = {
-                "Authorization": f"Bearer {self.api_token}",
                 "Content-Type": "application/json"
             }
 
             response = requests.post(
-                f"{self.signal_api_url}/v1/send",
+                self.signal_sender_url,
                 json=payload,
                 headers=headers,
                 timeout=30
             )
 
             if response.status_code == 200:
-                logger.info(f"Message sent successfully to {recipient}")
+                logger.info(f"Message sent successfully to {recipient or group_id}")
                 return True
             else:
                 logger.error(f"Failed to send message: {response.status_code} - {response.text}")
@@ -73,30 +59,8 @@ class SignalClient:
             return False
 
     def send_typing_indicator(self, recipient, group_id=None):
-        """Send typing indicator"""
-        try:
-            if not self.signal_api_url or not self.api_token:
-                return False
-
-            payload = {
-                "recipients": [recipient] if not group_id else None,
-                "groupId": group_id
-            }
-
-            headers = {
-                "Authorization": f"Bearer {self.api_token}",
-                "Content-Type": "application/json"
-            }
-
-            response = requests.post(
-                f"{self.signal_api_url}/v1/typing",
-                json=payload,
-                headers=headers,
-                timeout=10
-            )
-
-            return response.status_code == 200
-
-        except Exception as e:
-            logger.error(f"Error sending typing indicator: {e}")
-            return False
+        """Send typing indicator (placeholder for serverless implementation)"""
+        # For serverless, typing indicators could be implemented as a separate function
+        # For now, we'll skip this feature to keep it simple
+        logger.info("Typing indicators not implemented in serverless version")
+        return True

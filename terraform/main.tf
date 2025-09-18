@@ -92,6 +92,27 @@ resource "google_storage_bucket" "function_source" {
   }
 }
 
+# Cloud Storage bucket for Signal configurations
+resource "google_storage_bucket" "signal_configs" {
+  name     = "${var.project_id}-signal-configs"
+  location = var.region
+
+  uniform_bucket_level_access = true
+
+  versioning {
+    enabled = true
+  }
+
+  lifecycle_rule {
+    condition {
+      age = 90
+    }
+    action {
+      type = "Delete"
+    }
+  }
+}
+
 # Webhook Cloud Function
 resource "google_cloudfunctions2_function" "webhook" {
   name     = "signal-webhook"
@@ -212,6 +233,76 @@ resource "google_cloudfunctions2_function" "stock_handler" {
   ]
 }
 
+# Signal Registration Cloud Function
+resource "google_cloudfunctions2_function" "signal_registration" {
+  name     = "signal-registration"
+  location = var.region
+
+  build_config {
+    runtime     = "python311"
+    entry_point = "signal_registration"
+
+    source {
+      storage_source {
+        bucket = google_storage_bucket.function_source.name
+        object = "signal-registration-source.zip"
+      }
+    }
+  }
+
+  service_config {
+    max_instance_count = 3
+    available_memory   = "512M"
+    timeout_seconds    = 180
+
+    service_account_email = google_service_account.signal_bot.email
+
+    environment_variables = {
+      GOOGLE_CLOUD_PROJECT = var.project_id
+      GCP_REGION          = var.region
+    }
+  }
+
+  depends_on = [
+    google_storage_bucket.signal_configs
+  ]
+}
+
+# Signal Sender Cloud Function
+resource "google_cloudfunctions2_function" "signal_sender" {
+  name     = "signal-sender"
+  location = var.region
+
+  build_config {
+    runtime     = "python311"
+    entry_point = "signal_sender"
+
+    source {
+      storage_source {
+        bucket = google_storage_bucket.function_source.name
+        object = "signal-sender-source.zip"
+      }
+    }
+  }
+
+  service_config {
+    max_instance_count = 10
+    available_memory   = "512M"
+    timeout_seconds    = 120
+
+    service_account_email = google_service_account.signal_bot.email
+
+    environment_variables = {
+      GOOGLE_CLOUD_PROJECT = var.project_id
+      GCP_REGION          = var.region
+    }
+  }
+
+  depends_on = [
+    google_storage_bucket.signal_configs
+  ]
+}
+
 # Cloud Function invoker permissions for webhook
 resource "google_cloudfunctions2_function_iam_member" "webhook_invoker" {
   project        = var.project_id
@@ -221,17 +312,27 @@ resource "google_cloudfunctions2_function_iam_member" "webhook_invoker" {
   member         = "allUsers"
 }
 
-# Secret Manager secrets (placeholders - values need to be set manually)
-resource "google_secret_manager_secret" "signal_api_url" {
-  secret_id = "signal-api-url"
-
-  replication {
-    auto {}
-  }
+# Cloud Function invoker permissions for Signal registration
+resource "google_cloudfunctions2_function_iam_member" "signal_registration_invoker" {
+  project        = var.project_id
+  location       = var.region
+  cloud_function = google_cloudfunctions2_function.signal_registration.name
+  role           = "roles/cloudfunctions.invoker"
+  member         = "allUsers"
 }
 
-resource "google_secret_manager_secret" "signal_api_token" {
-  secret_id = "signal-api-token"
+# Cloud Function invoker permissions for Signal sender
+resource "google_cloudfunctions2_function_iam_member" "signal_sender_invoker" {
+  project        = var.project_id
+  location       = var.region
+  cloud_function = google_cloudfunctions2_function.signal_sender.name
+  role           = "roles/cloudfunctions.invoker"
+  member         = "allUsers"
+}
+
+# Secret Manager secrets
+resource "google_secret_manager_secret" "signal_phone_number" {
+  secret_id = "signal-phone-number"
 
   replication {
     auto {}

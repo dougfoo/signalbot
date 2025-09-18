@@ -46,27 +46,31 @@ def process_message(cloud_event):
 
         # Route commands
         if command == '/stock':
-            await route_stock_command(sender, args, group_id)
+            route_stock_command(sender, args, group_id)
         elif command == '/help':
-            await route_help_command(sender, group_id)
+            route_help_command(sender, group_id)
         else:
-            await send_unknown_command_response(sender, command, group_id)
+            send_unknown_command_response(sender, command, group_id)
 
         # Log command usage
-        await log_command_usage(sender, command, args, group_id)
+        log_command_usage(sender, command, args, group_id)
+
+        # Send acknowledgment for group chats
+        if group_id:
+            send_response(sender, f"Processing {command} command...", group_id)
 
     except Exception as e:
         logger.error(f"Error processing message: {str(e)}")
 
-async def route_stock_command(sender, args, group_id):
+def route_stock_command(sender, args, group_id):
     """Route stock command to stock handler function"""
     if not args:
-        await send_response(sender, "Usage: /stock <ticker>\nExample: /stock AAPL", group_id)
+        send_response(sender, "Usage: /stock <ticker>\nExample: /stock AAPL", group_id)
         return
 
     ticker = args[0].upper()
     if not re.match(r'^[A-Z]{1,5}$', ticker):
-        await send_response(sender, "Invalid ticker symbol. Please use 1-5 letters.", group_id)
+        send_response(sender, "Invalid ticker symbol. Please use 1-5 letters.", group_id)
         return
 
     # Publish to stock handler
@@ -80,29 +84,38 @@ async def route_stock_command(sender, args, group_id):
     future = publisher.publish(topic_path, json.dumps(stock_request).encode('utf-8'))
     logger.info(f"Stock request published: {future.result()}")
 
-async def route_help_command(sender, group_id):
+def route_help_command(sender, group_id):
     """Send help message"""
-    help_text = """Available commands:
-/stock <ticker> - Get current stock price (e.g., /stock AAPL)
-/help - Show this help message
+    context = "group chat" if group_id else "direct message"
+    help_text = f"""🤖 Signal Stock Bot - Available Commands
 
-Example: /stock TSLA"""
+📈 /stock <ticker> - Get real-time stock price
+   Examples: /stock AAPL, /stock TSLA, /stock MSFT
 
-    await send_response(sender, help_text, group_id)
+ℹ️  /help - Show this help message
 
-async def send_unknown_command_response(sender, command, group_id):
+💡 Usage in {context}:
+   • Bot responds to all group members
+   • Commands work the same in DM or group
+   • Stock data updates every request
+
+🚀 Try: /stock AAPL"""
+
+    send_response(sender, help_text, group_id)
+
+def send_unknown_command_response(sender, command, group_id):
     """Send response for unknown commands"""
     response = f"Unknown command: {command}\nType /help for available commands."
-    await send_response(sender, response, group_id)
+    send_response(sender, response, group_id)
 
-async def send_response(sender, message, group_id):
+def send_response(sender, message, group_id):
     """Send response back to Signal"""
     # This would integrate with Signal API to send messages
     # For now, we'll log the response
     logger.info(f"Sending response to {sender}: {message}")
     # TODO: Implement actual Signal API response
 
-async def log_command_usage(sender, command, args, group_id):
+def log_command_usage(sender, command, args, group_id):
     """Log command usage to Firestore"""
     try:
         doc_ref = db.collection('commands').document()
