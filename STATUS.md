@@ -37,7 +37,8 @@
 #### Issue Details
 - **Problem**: Signal registration rate limited (HTTP 429)
 - **Cause**: Multiple registration attempts triggered Signal's anti-spam protection
-- **Last Attempt**: 2025-09-18 - Rate limit encountered with working captcha
+- **Last Attempt**: 2025-09-18 (Multiple attempts) - Rate limit still active
+- **Latest Token Test**: Fresh captcha confirmed working format
 - **Phone Number**: +818041427606 (format confirmed working)
 - **Captcha Status**: ✅ Working - fresh tokens now accepted properly
 
